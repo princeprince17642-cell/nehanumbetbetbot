@@ -160,4 +160,5 @@ if __name__ == '__main__':
     app.add_handler(MessageHandler(filters.ALL & ~filters.COMMAND, handle_messages))
 
     print("Personal Bot start ho gaya hai...")
-    app.run_polling()
+    # मॉडर्न पोलिंग जो नए पायथन और टेलीग्राम वर्जनों पर कभी क्रैश नहीं होती
+    app.run_polling(drop_pending_updates=True, allowed_updates=Update.ALL_TYPES)
