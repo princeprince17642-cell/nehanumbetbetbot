@@ -154,11 +154,10 @@ async def handle_messages(update: Update, context: ContextTypes.DEFAULT_TYPE):
 if __name__ == '__main__':
     keep_alive()
     
-    # नया और स्टेबल तरीका ताकि रेलवे पर कभी क्रैश न हो
     app = ApplicationBuilder().token(BOT_TOKEN).build()
     app.add_handler(ChatJoinRequestHandler(handle_join_request))
     app.add_handler(CommandHandler("broadcast", broadcast))
     app.add_handler(MessageHandler(filters.ALL & ~filters.COMMAND, handle_messages))
 
     print("Personal Bot start ho gaya hai...")
-    app.run_polling(drop_pending_updates=True)
+    app.run_polling()
