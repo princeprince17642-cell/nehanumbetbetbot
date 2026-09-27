@@ -23,7 +23,7 @@ def keep_alive():
     t.start()
 
 BOT_TOKEN = "8772146528:AAFTriqWVih_t8GvpfqpWEN6gVpomTlAS-Y"
-ADMIN_ID = 8343576029  # तेरी ऑफिशियल एडमिन आईडी सेट कर दी गई है
+ADMIN_ID = 8343576029  
 USERS_FILE = "users.json"
 VOICE_FILE_ID_FILE = "voice_id.txt"
 
@@ -58,7 +58,6 @@ async def handle_join_request(update: Update, context: ContextTypes.DEFAULT_TYPE
     
     save_user(user_id)
 
-    # वेलकम टेक्स्ट
     try:
         await context.bot.send_message(
             chat_id=user_id,
@@ -67,7 +66,6 @@ async def handle_join_request(update: Update, context: ContextTypes.DEFAULT_TYPE
     except Exception as e:
         print(f"Error sending welcome text: {e}")
 
-    # दोस्त का वॉइस नोट भेजना (अगर सेट है)
     saved_voice = get_saved_voice_id()
     if saved_voice:
         try:
@@ -76,7 +74,7 @@ async def handle_join_request(update: Update, context: ContextTypes.DEFAULT_TYPE
         except Exception as e:
             print(f"Error sending voice note: {e}")
 
-# --- 2. ब्रॉडकास्ट कमांड (सिर्फ एडमिन के लिए) ---
+# --- 2. ब्रॉडकास्ट कमांड ---
 async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id != ADMIN_ID:
         await update.message.reply_text("तू इस कमांड को इस्तेमाल नहीं कर सकता!")
@@ -108,16 +106,13 @@ async def handle_messages(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     message = update.message
 
-    # अगर मैसेज एडमिन (तू) की तरफ से है
     if user.id == ADMIN_ID:
-        # अगर तू वॉइस नोट भेजकर कैप्शन में /setvoice लिखता है
         if message.voice and message.caption and message.caption.strip() == "/setvoice":
             with open(VOICE_FILE_ID_FILE, "w") as f:
                 f.write(message.voice.file_id)
             await message.reply_text("✅ दोस्त का वॉइस नोट परमानेंट सेट हो गया है!")
             return
 
-        # लाइव चैट रिप्लाई हैंडलर
         if message.reply_to_message:
             replied_text = message.reply_to_message.text or message.reply_to_message.caption
             if replied_text and "User ID:" in replied_text:
@@ -135,7 +130,6 @@ async def handle_messages(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     await message.reply_text(f"❌ भेजने में एरर आया: {e}")
         return
 
-    # अगर मैसेज आम यूजर की तरफ से है
     else:
         save_user(user.id)
         
@@ -160,10 +154,11 @@ async def handle_messages(update: Update, context: ContextTypes.DEFAULT_TYPE):
 if __name__ == '__main__':
     keep_alive()
     
+    # नया और स्टेबल तरीका ताकि रेलवे पर कभी क्रैश न हो
     app = ApplicationBuilder().token(BOT_TOKEN).build()
     app.add_handler(ChatJoinRequestHandler(handle_join_request))
     app.add_handler(CommandHandler("broadcast", broadcast))
     app.add_handler(MessageHandler(filters.ALL & ~filters.COMMAND, handle_messages))
 
     print("Personal Bot start ho gaya hai...")
-    app.run_polling(allowed_updates=["chat_join_request", "message"])
+    app.run_polling(drop_pending_updates=True)
