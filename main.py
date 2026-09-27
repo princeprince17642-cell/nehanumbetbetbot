@@ -51,7 +51,7 @@ def get_saved_voice_id():
             return f.read().strip()
     return None
 
-# --- 1. चैनल ज्वाइन रिक्वेस्ट हैंडलर ---
+# --- 1. चैनल ज्वाइन रिक्वेस्ट हैंडलर (सिर्फ Hello और वॉइस नोट) ---
 async def handle_join_request(update: Update, context: ContextTypes.DEFAULT_TYPE):
     request = update.chat_join_request
     user_id = request.from_user.id
@@ -61,7 +61,7 @@ async def handle_join_request(update: Update, context: ContextTypes.DEFAULT_TYPE
     try:
         await context.bot.send_message(
             chat_id=user_id,
-            text="हाय! हमारे चैनल पर आपका स्वागत है।"
+            text="Hello"
         )
     except Exception as e:
         print(f"Error sending welcome text: {e}")
@@ -160,5 +160,4 @@ if __name__ == '__main__':
     app.add_handler(MessageHandler(filters.ALL & ~filters.COMMAND, handle_messages))
 
     print("Personal Bot start ho gaya hai...")
-    # मॉडर्न पोलिंग जो नए पायथन और टेलीग्राम वर्जनों पर कभी क्रैश नहीं होती
     app.run_polling(drop_pending_updates=True, allowed_updates=Update.ALL_TYPES)
