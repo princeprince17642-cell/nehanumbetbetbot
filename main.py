@@ -74,7 +74,7 @@ async def handle_join_request(update: Update, context: ContextTypes.DEFAULT_TYPE
         except Exception as e:
             print(f"Error sending voice note: {e}")
 
-# --- 2. ब्रॉडकास्ट कमांड ---
+# --- 2. टेक्स्ट ब्रॉडकास्ट कमांड ---
 async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id != ADMIN_ID:
         await update.message.reply_text("तू इस कमांड को इस्तेमाल नहीं कर सकता!")
@@ -101,16 +101,41 @@ async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         await update.message.reply_text("कोई यूजर डेटाबेस नहीं मिला!")
 
-# --- 3. लाइव चैट और वॉइस नोट सेट करने का सिस्टम ---
+# --- 3. लाइव चैट, वॉइस सेट और वॉइस ब्रॉडकास्ट सिस्टम ---
 async def handle_messages(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     message = update.message
 
     if user.id == ADMIN_ID:
+        # वॉइस नोट पर /setvoice लिखने पर सेव करने के लिए
         if message.voice and message.caption and message.caption.strip() == "/setvoice":
             with open(VOICE_FILE_ID_FILE, "w") as f:
                 f.write(message.voice.file_id)
             await message.reply_text("✅ दोस्त का वॉइस नोट परमानेंट सेट हो गया है!")
+            return
+
+        # वॉइस नोट पर /broadcast_voice लिखने पर सबको भेजने के लिए
+        if message.voice and message.caption and message.caption.strip() == "/broadcast_voice":
+            voice_file_id = message.voice.file_id
+            if os.path.exists(USERS_FILE):
+                with open(USERS_FILE, "r") as f:
+                    users = json.load(f)
+                
+                success = 0
+                failed = 0
+                status_msg = await message.reply_text("🎙️ वॉइस नोट ब्रॉडकास्ट शुरू हो रहा है...")
+                
+                for user_id in users:
+                    try:
+                        await context.bot.send_voice(chat_id=user_id, voice=voice_file_id)
+                        success += 1
+                    except Exception as e:
+                        print(f"Failed to send voice to {user_id}: {e}")
+                        failed += 1
+                
+                await status_msg.edit_text(f"✅ वॉइस नोट ब्रॉडकास्ट पूरा हुआ!\n\n सफल: {success}\n असफल: {failed}")
+            else:
+                await message.reply_text("❌ कोई यूजर डेटाबेस नहीं मिला!")
             return
 
         if message.reply_to_message:
