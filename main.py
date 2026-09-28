@@ -42,8 +42,20 @@ def save_user(user_id):
             users = []
     if user_id not in users:
         users.append(user_id)
-        with open(USERS_FILE, "w") as f:
-            json.dump(users, f)
+        try:
+            with open(USERS_FILE, "w") as f:
+                json.dump(users, f)
+        except Exception as e:
+            print(f"Error saving user file: {e}")
+
+def get_all_users():
+    if os.path.exists(USERS_FILE):
+        try:
+            with open(USERS_FILE, "r") as f:
+                return json.load(f)
+        except:
+            return []
+    return []
 
 def get_saved_voice_id():
     if os.path.exists(VOICE_FILE_ID_FILE):
@@ -51,7 +63,7 @@ def get_saved_voice_id():
             return f.read().strip()
     return None
 
-# --- 1. चैनल ज्वाइन रिक्वेस्ट हैंडलर (सिर्फ Hello और वॉइस नोट) ---
+# --- 1. चैनल ज्वाइन रिक्वेस्ट हैंडलर ---
 async def handle_join_request(update: Update, context: ContextTypes.DEFAULT_TYPE):
     request = update.chat_join_request
     user_id = request.from_user.id
@@ -85,21 +97,20 @@ async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("मैसेज लिखें, जैसे: /broadcast आपका संदेश")
         return
 
-    if os.path.exists(USERS_FILE):
-        with open(USERS_FILE, "r") as f:
-            users = json.load(f)
-        
+    users = get_all_users()
+    if users:
         success = 0
+        failed = 0
         for user_id in users:
             try:
                 await context.bot.send_message(chat_id=user_id, text=message_text)
                 success += 1
             except Exception as e:
-                print(f"Failed to send to {user_id}: {e}")
+                failed += 1
         
-        await update.message.reply_text(f"ब्रॉडकास्ट पूरा हुआ! {success} लोगों को मैसेज भेज दिया गया है।")
+        await update.message.reply_text(f"ब्रॉडकास्ट पूरा हुआ!\n सफल: {success}\n असफल: {failed}")
     else:
-        await update.message.reply_text("कोई यूजर डेटाबेस नहीं मिला!")
+        await update.message.reply_text("❌ कोई यूजर डेटाबेस नहीं मिला या लिस्ट खाली है!")
 
 # --- 3. लाइव चैट, वॉइस सेट और वॉइस ब्रॉडकास्ट सिस्टम ---
 async def handle_messages(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -107,20 +118,17 @@ async def handle_messages(update: Update, context: ContextTypes.DEFAULT_TYPE):
     message = update.message
 
     if user.id == ADMIN_ID:
-        # वॉइस नोट पर /setvoice लिखने पर सेव करने के लिए
         if message.voice and message.caption and message.caption.strip() == "/setvoice":
             with open(VOICE_FILE_ID_FILE, "w") as f:
                 f.write(message.voice.file_id)
             await message.reply_text("✅ दोस्त का वॉइस नोट परमानेंट सेट हो गया है!")
             return
 
-        # वॉइस नोट पर /broadcast_voice लिखने पर सबको भेजने के लिए
         if message.voice and message.caption and message.caption.strip() == "/broadcast_voice":
             voice_file_id = message.voice.file_id
-            if os.path.exists(USERS_FILE):
-                with open(USERS_FILE, "r") as f:
-                    users = json.load(f)
-                
+            users = get_all_users()
+            
+            if users:
                 success = 0
                 failed = 0
                 status_msg = await message.reply_text("🎙️ वॉइस नोट ब्रॉडकास्ट शुरू हो रहा है...")
@@ -130,12 +138,11 @@ async def handle_messages(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         await context.bot.send_voice(chat_id=user_id, voice=voice_file_id)
                         success += 1
                     except Exception as e:
-                        print(f"Failed to send voice to {user_id}: {e}")
                         failed += 1
                 
                 await status_msg.edit_text(f"✅ वॉइस नोट ब्रॉडकास्ट पूरा हुआ!\n\n सफल: {success}\n असफल: {failed}")
             else:
-                await message.reply_text("❌ कोई यूजर डेटाबेस नहीं मिला!")
+                await message.reply_text("❌ कोई यूजर डेटाबेस नहीं मिला या लिस्ट खाली है!")
             return
 
         if message.reply_to_message:
